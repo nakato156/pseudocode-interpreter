@@ -9,7 +9,7 @@ z=a>6;
 // imprimir(z); comentario
 
 func abc(a,b):
-START
+START;
     x='hey';
     imprimir('a es: ',a);
 END;
@@ -17,9 +17,9 @@ una = abc(1,2);
 fin ='fin?';
 
 iterar i desde 1 hasta 3:
-START
+START;
     iterar x desde 1 hasta 3:
-    START
+    START;
         imprimir(x);
     END;
     imprimir(i);

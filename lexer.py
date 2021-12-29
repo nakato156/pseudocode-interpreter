@@ -4,7 +4,7 @@ arithmetic_operators = {
     "+": lambda a,b: a+b,
     "-": lambda a,b: a-b,
     "^": lambda a,b: a**b,
-    "/": lambda a,b: a/b,
+    "/": lambda a,b: a.__div__(b),
     "//": lambda a,b: a//b,
     "*": lambda a,b: a*b
 }
@@ -17,40 +17,6 @@ def check_float(texto:str)->str:
     return texto
 
 operadores = "=(),+-*/<>[];:!~"
-def my_tokenizer(stream)->str:
-    for line in stream:
-        linea:str = line.strip()
-        if linea.count("=")==1 and linea[-1] !=";": exit("EOL Error")
-        largo = len(linea)
-        i = 0
-        while i < largo:
-            inicio = i
-
-            while linea[i] == ' ' and i < largo:
-                i += 1
-
-            if i == largo: break
-            
-            car = linea[i]
-            if linea[i] in operadores:
-                yield car
-                i += 1
-
-            elif car in "'\"":
-                inicio = i
-                i += 1
-                while i < largo and linea[i] != car:
-                    i += 1
-                yield linea[inicio:i+1]
-                i += 1
-
-            else:
-                inicio = i
-                i += 1
-                while i < largo and linea[i] not in operadores and linea[i] != ' ':
-                    i += 1
-                yield linea[inicio:i]
-
 class Token():
     OPERADOR = 1
     ENTERO = 2
@@ -63,6 +29,8 @@ class Token():
     ARRAY = 9
     RETURN = 10
     CONDICION = 11
+    BOOLEAN = 12
+    NADA = 13
 
     precedencia = {
             1:"+-()",
@@ -70,13 +38,28 @@ class Token():
             3:"*/%^"
     }
 
+    tipos = {
+        2: "ENTERO",
+        3: "FLOAT",
+        6: "STRING",
+        9: "ARRAY",
+        12: "BOOLEAN",
+        13: "NADA"
+    }
+
     def __init__(self, texto:str):
+        self.clasf_token(texto)
+    
+    def clasf_token(self, texto:str):
         texto = texto.replace("'", '"')
         self.tipo = None
         self.texto = texto
         if texto in "*^/+-%":
             self.tipo = Token.OPERADOR
             self.precedencia = [k for k,v in Token.precedencia.items() if texto in v][0]
+        elif texto in ["None","NADA"]: self.tipo = Token.NADA
+        elif texto in ["verdadero", "falso", "True", "False"]:
+            self.tipo = Token.BOOLEAN
         elif texto in ["iterar","para"]:
             self.tipo = Token.FOR
         elif texto == "mientras":
@@ -99,6 +82,17 @@ class Token():
             self.tipo = Token.STRING
             self.texto = texto[1:-1]
 
+    def _get_value(self):
+        vals = {
+            Token.ENTERO: lambda x: int(x),
+            Token.FLOAT: lambda x: float(x),
+            Token.ARRAY: lambda x: x[1:-1].split(",")
+        }
+        return vals[self.tipo](self.texto) if self.tipo in vals.keys() else self.texto
+
+    def get_type(self)->str:
+        return Token.tipos[self.tipo] if self.tipo in Token.tipos else self.texto
+
     def __str__(self):
         return f"{self.texto}"
 
@@ -113,40 +107,132 @@ class Token():
         return f"({self.tipo}, {self.texto})"
     
     def __eq__(self, other):
-        if type(other) == str:
-            return self.texto[1:-1] == other
-        else:
-            return self.texto == other.texto and self.tipo == other.tipo
+        if type(other) == Token: other = other._get_value()
+        return self._get_value() == other
+
+    def __add__(self, other):
+        if type(other) == Token: other = other._get_value()
+        self.clasf_token(f"{self._get_value() + other}")
+        return self
+
+    def __sub__(self, other):
+        if type(other) == Token: other = other._get_value()
+        self.clasf_token(f"{self._get_value() - other}")
+        return self
+
+    def __mul__(self, other):
+        if type(other) == Token: other = other._get_value()
+        self.clasf_token(f"{self._get_value() * other}")
+        return self
+
+    def __div__(self, other)->float:
+        if type(other) == Token: other = other._get_value()
+        self.clasf_token(f"{self._get_value() / other}")
+        return self
+
+    def __floordiv__(self, other)->int:
+        if type(other) == Token: other = other._get_value()
+        self.clasf_token(f"{self._get_value() // other}")
+        return self
+
+    def __pow__(self, other):
+        if type(other) == Token: other = other._get_value()
+        self.clasf_token(f"{self._get_value() ** other}")
+        return self
+
+    def __mod__(self, other):
+        if type(other) == Token: other = other._get_value()
+        self.clasf_token(f"{self._get_value() % other}")
+        return self
+
+    def __lt__(self, other)->bool:
+        if type(other) == Token: other = other._get_value()
+        return self._get_value() < other
+
+    def __gt__(self, other)->bool:
+        if type(other) == Token: other = other._get_value()
+        return self._get_value() > other
+
+    def __bool__(self):
+        if self.tipo == Token.BOOLEAN:
+            return True if self.texto.lower == "verdadero" else False
+        return False if self.texto in ["", 0] else True
 
     def __getitem__(self, i):
         return self.texto[i]
-
 class Tokenizer():
-    def __init__(self, pgma):
-        self.tokens = [Token(x) for x in pgma] if type(pgma) !=list else pgma 
+    def __init__(self, pgma:list):
+        self.tokens = self._tokenizer(pgma)
 
-    def get_token(self)->Token:
-        return self.tokens.pop(0) if self.tokens else None
+    def __iter__(self):
+        return self
+    
+    def __next__(self)->Token:
+        return next(self.tokens)
+
+    def _tokenizer(self, pgma)->Token:
+        for line in pgma:
+            linea:str = line.strip()
+            if linea.count("=")==1 and linea[-1] !=";": exit("EOL Error")
+            largo = len(linea)
+            i = 0
+            while i < largo:
+                inicio = i
+
+                while linea[i] == ' ' and i < largo:
+                    i += 1
+
+                if i == largo: break
+                
+                car = linea[i]
+                if linea[i] in operadores:
+                    yield Token(car)
+                    i += 1
+
+                elif car in "'\"":
+                    inicio = i
+                    i += 1
+                    while i < largo and linea[i] != car:
+                        i += 1
+                    yield Token(linea[inicio:i+1])
+                    i += 1
+
+                else:
+                    inicio = i
+                    i += 1
+                    while i < largo and linea[i] not in operadores and linea[i] != ' ':
+                        i += 1
+                    yield Token(linea[inicio:i])
     
     def skip_tokens(self, skip)->Token:
-        for _ in range(skip):
-            if not self.tokens: break
-            self.tokens.pop(0)
-        return self.get_token()
+        try:
+            for _ in range(skip):
+                next(self.tokens)
+                if not self.tokens: break
+            n = next(self.tokens)
+        except StopIteration:
+            n = None
+        return n
     
     def copy(self):
-        return Tokenizer(self.tokens[:])
+        return Tokenizer(self.stream[:])
+
+    def tmp_iter(self, iterable:list):
+        self._temporal_iterable = iterable.copy()
+        self.tokens = iter(self._temporal_iterable[:])
 
     def __enter__(self):
         tks = []
-        while True:
-            tk = self.get_token()
-            if tk and tk.texto==":": break
-            elif not tk: exit("EOF Error")
-            tks.append(tk)
-        self.prov = self.tokens.copy()
+        try:
+            for tk in self.tokens:
+                if tk and tk.texto==":": break
+                elif not tk: exit("EOF Error")
+                tks.append(tk)
+        except StopIteration: 
+            pass
+        self.prov = self.tokens
         tks.append(Token(";"))
-        self.tokens = tks
+        self.tokens = iter(tks)
         return self
 
     def __exit__(self, type, x, traceback):
@@ -180,7 +266,7 @@ class Stack():
         if op.tipo != Token.OPERADOR:
             if op.tipo != Token.ENTERO and op.texto in "=~!<>": return True
             op = Token(f"{variables[op.texto]}") if op.tipo == Token.IDENTIFICADOR else op
-            self.add_valores(op.texto)
+            self.add_valores(op)
 
         elif op.tipo == Token.OPERADOR:
             prece = op.precedencia
@@ -190,16 +276,16 @@ class Stack():
             else:
                 ultimo_op = self.operadores[-2][1]
                 if prece>ultimo_op:
-                    next = self.pgma.get_token().texto
-                    next = self.pgma.get_token().texto if next == "/" else next
-                    res = arithmetic_operators[op.texto](self.valores[-1], next)
+                    nxt = next(self.pgma)
+                    nxt = next(self.pgma) if nxt.texto == "/" else nxt
+                    res = arithmetic_operators[op.texto](self.valores[-1], nxt)
                     del self.operadores[-1]
                     self.add_valores(res,-1)
                 else: 
                     if self.operadores[-2:] == [("/",3),("/",3)]:
-                        next = self.pgma.get_token().texto
-                        if  type(next) != int: exit("No se puede operar con una cadena de texto")
-                        self.add_valores(next,0)
+                        nxt = next(self.pgma)
+                        if  not nxt in [Token.ENTERO,Token.FLOAT]: exit("No se puede operar con una cadena de texto")
+                        self.add_valores(nxt,0)
                         return
                     
                     res = arithmetic_operators[self.operadores[-2][0]](self.valores[-2], self.valores[-1])
@@ -210,9 +296,13 @@ class Stack():
     def get_Stack(self)->tuple:
         return self.valores, self.operadores
 
+class Native_function():
+    def __init__(self, functions):
+        self.functions = functions
+
 variables = {
     "imprimir": lambda x: print(*x),
-    "tipo": lambda x: type(x[0]),
+    "tipo": lambda x: x[0].get_type(),
     "leer": lambda x: input(*x)
 }
 
@@ -225,45 +315,45 @@ operaciones_igualdad = {
 }
 
 def call_function(func, tokens:Tokenizer, scope_vars=variables):
-    tmp_tokens = Tokenizer([])
+    tmp_tokens = []
     if func in scope_vars or func in variables:
         place = scope_vars if func in scope_vars else variables
         args, pre_args, END, tk = [], [], 1, True
-        while tk:
-            tk = tokens.get_token()
+        for tk in tokens:
+            if tk.texto == ";" and tk.tipo is None: exit("Sintaxis Inválida")
             if tk.texto == "(": END+=1
             elif tk.texto == ")": END-=1
             if END==0 and tk.texto == ")": 
-                tmp_tokens.tokens = pre_args
-                if tmp_tokens.tokens: args.append(eval_expresion(tmp_tokens, scope_vars))
+                tmp_tokens = pre_args
+                if tmp_tokens: args.append(eval_expresion(iter(tmp_tokens), scope_vars))
                 break
             elif tk.texto!=",": pre_args.append(tk)
             elif tk.texto == ",": 
-                tmp_tokens.tokens = pre_args
-                args.append(eval_expresion(tmp_tokens, scope_vars))
+                tmp_tokens = pre_args
+                args.append(eval_expresion(iter(tmp_tokens), scope_vars))
         else: exit("EOF Error")
+        if func == "tipo": print("the arguments: ",args)
         return place[func](args)
     else:
         raise NameError(f"No se ha declarado la función {func}")
 
 def proc_array(exp:Tokenizer, scope_vars=variables)->Token:
     args = []
-    tk = Tokenizer([])
-    tk.tokens = []
-    while True:
-        n_tk = exp.get_token()
+    tokens = []
+    for n_tk in exp:
         if n_tk is None: break
         elif n_tk.texto == ",":
-            if tk.tokens: args.append(eval_expresion(tk, scope_vars))
+            if tokens: args.append(eval_expresion(iter(tokens), scope_vars))
             continue
         elif n_tk.texto == "[":
             n_tk = proc_array(exp)
             args.append(n_tk)
             continue
         elif n_tk.texto == "]": 
-            if tk.tokens: args.append(eval_expresion(tk, scope_vars))
+            if tokens: args.append(eval_expresion(iter(tokens), scope_vars))
             break
-        tk.tokens.append(n_tk)
+        tokens.append(n_tk)
+    
     tk = Token("")
     tk.tipo = Token.ARRAY
     tk.texto = args
@@ -271,163 +361,163 @@ def proc_array(exp:Tokenizer, scope_vars=variables)->Token:
 
 def eval_expresion(exp:Tokenizer, scope_vars=variables):
     my_Stack = Stack(exp)
-    tk = exp.get_token()
-    if not tk: return tk
-    if len(exp.tokens)<2: return scope_vars[tk.texto] if tk.tipo == Token.IDENTIFICADOR else tk.texto
-    flag, func = None, None
-    while tk:
-        if tk.texto == ";": break
-        elif tk.texto == "[": 
-            arr = proc_array(exp, scope_vars)
-            my_Stack.add_valores(arr)
-            tk = exp.get_token()
-        elif flag:
-            f = flag
-            flag = False
-            if f[1] == "=":
-                if tk.texto == "=":
-                    print(my_Stack.valores)
-                    ant = arithmetic_operators[my_Stack.operadores[-1][0]](*my_Stack.valores) if len(my_Stack.valores)!=1 else my_Stack.valores[-1]
-                    val = ant == eval_expresion(exp, scope_vars)
-                    return val
-                raise SyntaxError(f"Token inesperado {tk.texto}")
-            elif f[1] in "!~ ": return not tk
-            elif f[1] in "<>":
-                ant = arithmetic_operators[my_Stack.operadores[-1][0]](*my_Stack.valores) if len(my_Stack.valores)!=1 else my_Stack.valores[-1]
-                
-                if tk.texto == "=": 
-                    val = operaciones_igualdad[f"{f[1]}="](ant,exp.get_token().texto)
-                else: val = operaciones_igualdad[f"{f[1]}"](ant,tk.texto)
-                return val
-                
-            else: raise SyntaxError(tk)
-        else:
-            r = my_Stack.def_precedencia(tk)
-            if r: flag = True,tk.texto
-            if tk.tipo == Token.IDENTIFICADOR: func=True,tk
-            tk = exp.get_token()
-            func = func if tk.texto == "(" else False
-        if func:
-            my_Stack.add_valores(call_function(func[1].texto, exp, scope_vars))
-            func = False
-            tk = exp.get_token()
+    flag, maybe = None, None
+    try:
+        for tk in exp:
+            if maybe and tk.texto=="(":
+                my_Stack.add_valores(call_function(maybe[1].texto, exp, scope_vars))
+                maybe = False
+            else:
+                if tk.texto == ";" and tk.tipo == None: break
+                elif tk.texto == "[": 
+                    arr = proc_array(exp, scope_vars)
+                    my_Stack.add_valores(arr)
+                elif flag:
+                    f = flag
+                    flag = False
+                    if f[1] == "=":
+                        if tk.texto == "=":
+                            ant = arithmetic_operators[my_Stack.operadores[-1][0]](*my_Stack.valores) if len(my_Stack.valores)!=1 else my_Stack.valores[-1]
+                            val = ant == eval_expresion(exp, scope_vars)
+                            return val
+                        raise SyntaxError(f"Token inesperado {tk.texto}")
+                    elif f[1] in "!~ ": return not tk
+                    elif f[1] in "<>":
+                        ant = arithmetic_operators[my_Stack.operadores[-1][0]](*my_Stack.valores) if len(my_Stack.valores)!=1 else my_Stack.valores[-1]
+                        
+                        if tk.texto == "=": 
+                            val = operaciones_igualdad[f"{f[1]}="](ant,next(exp).texto)
+                        else: val = operaciones_igualdad[f"{f[1]}"](ant,tk.texto)
+                        return val
+                        
+                    else: raise SyntaxError(tk)
+                else:
+                    r = my_Stack.def_precedencia(tk)
+                    if r: flag = True,tk.texto
+                    if tk.tipo == Token.IDENTIFICADOR: maybe=True,tk
 
-    vals,ops =my_Stack.get_Stack()
-    return arithmetic_operators[ops[-1][0]](*vals) if len(vals)>=1 and len(ops)>=1 else vals[-1]
+    except StopIteration:
+        pass
+
+    vals,ops = my_Stack.get_Stack()
+    r = arithmetic_operators[ops[-1][0]](*vals) if len(vals)>=1 and len(ops)>=1 else vals[-1]
+
+    if type(r)!=Token:
+        tk = Token(f"{r}")
+    return r
         
 def asignacion(token:Token, val:Tokenizer, scope_vars=variables)->None:
     scope_vars[token.texto] = eval_expresion(val)
 
 def exec_function(this, params, code):
     locales = dict(zip(this, *params))
-    tk = Tokenizer(code)
+    tk = Tokenizer([])
+    tk.tmp_iter(code)
     return run(tk, scope_vars=locales, Func=True)
 
 def proc_for(pgma:Tokenizer, scope_vars=variables)->tuple:
-    control_var = pgma.get_token()
+    control_var = next(pgma)
     code = []
-    n:Token = pgma.get_token()
+    n = next(pgma)
     if n.texto == "en": 
         with pgma as loop:
             iterable = eval_expresion(loop, scope_vars)
-        n = pgma.get_token()
+        n = next(pgma)
     elif n.texto == "desde":
         with pgma as loop:
-            inicio = pgma.get_token().texto
-            pgma.get_token()
-            fin = pgma.get_token().texto
-            paso = 1 if pgma.get_token().texto == ":" else pgma.skip_tokens(1)
+            inicio = next(pgma).texto
+            next(pgma)
+            fin = next(pgma).texto
+            paso = 1 if next(pgma).texto == ":" else pgma.skip_tokens(1)
             paso = int(1 if paso is None else paso )
         iterable = range(int(inicio),int(fin), paso)
-    n = pgma.get_token()
+    n = next(pgma)
     try:
         END = 1
-        while END!=0 and n:
-            code.append(n)
-            n = pgma.get_token()
+        for n in pgma:
             if n.texto == "START": END += 1  
             elif n.texto == "END": END-=1
+            if END==0:break
+            code.append(n)
     except AttributeError:
         exit("EOF Error")
-    pgma.tokens = code[1:]
-    return [control_var, iterable, pgma]
+    except StopIteration:
+        pass
+    return control_var, iterable, code
 
 def create_func(pgma:Tokenizer, n:Token, scope_vars=variables)->None:
     args, code = [],[]
     name = n.texto
-    n = pgma.get_token()
-    while n.texto !=":":
-        if n.tipo: args.append(n.texto)
-        n = pgma.get_token()
-    n = pgma.get_token()
-    while True:
+    for n in pgma:
+        if n.texto ==":": break
+        elif n.tipo: args.append(n.texto)
+    pgma.skip_tokens(1)
+    for n in pgma:
         if n and not n.texto in ["START","END"]: code.append(n)
         elif not n or n.texto=="END": break
-        n = pgma.get_token()
     scope_vars[name] = lambda *x: exec_function(this=args, params=x, code=code.copy())
 
 def proc_cond(pgma:Tokenizer, tk:Token, scope_vars:dict)->bool:
-    if tk.texto != "si": print(tk);exit("Sentencia inválida;")
+    if tk.texto != "si": exit("Sentencia inválida;")
     with pgma as condition:
         expr = eval_expresion(condition, scope_vars)
 
     tokens = []
-    while True:
-        tk = pgma.get_token()
+    pgma.skip_tokens(1)
+    for tk in pgma:
         if tk.texto == "END":break
         elif tk is None: exit("EOF ERROR")
         tokens.append(tk)
     
-    tks = pgma.tokens.copy()
-    pgma.tokens = tokens
+    tks = pgma.tokens
+    pgma.tmp_iter(tokens)
     if expr: run(pgma)
     pgma.tokens = tks
-    
-    if pgma.get_token().texto != ";": exit("EOL ERROR")
-    tk = pgma.get_token()
-    if tk.tipo == Token.CONDICION:
-        if not expr and tk.texto == "o":return proc_cond(pgma, pgma.get_token(), scope_vars)
-        elif not expr and tk.texto == "sino": 
-            if pgma.get_token().texto!=":": exit("EOL Error")
-            run(pgma, scope_vars)
-        else:
-            while tk and tk.texto !="o":
-                while tk and tk.texto!="END":
-                    tk = pgma.get_token()
-                pgma.get_token()
-                tk = pgma.get_token()
+
+    if next(pgma).texto != ";": exit("EOF ERROR")
     return expr
 
 def proc_while(pgma:Tokenizer):
     with pgma as condition:
-        while_condition = condition.copy()    
+        while_condition = [x for x in condition]
     pgma.skip_tokens(1)
     
-    n = pgma.get_token()
     code, END = [], 1
-    while END!=0 and n:
-        code.append(n)
-        n = pgma.get_token()
+    for n in pgma:
         if n.texto == "START": END += 1  
         elif n.texto == "END": END-=1
-    if pgma.get_token().texto != ";": exit("EOL Error")
-    
-    return while_condition, Tokenizer(code)
+        if END == 0 or not n: break
+        code.append(n)
+    if next(pgma).texto != ";": exit("EOL Error")
+    return while_condition, code
 
-def run(pgma:Tokenizer, scope_vars=variables, Func=None):
-    while True:
-        tk = pgma.get_token()
-        if tk is None: break
-        elif tk.tipo == Token.IDENTIFICADOR:
-            n = pgma.get_token()
+def run(pgma:Tokenizer, scope_vars=variables, Func=None, continue_for=None):
+    for tkn in pgma:
+        if continue_for: 
+            if tkn.texto in ["o","sino"] and tkn.tipo == Token.CONDICION: 
+                if not result_cond and tkn.texto == "o": return proc_cond(pgma, next(pgma), scope_vars)
+                elif not result_cond and tkn.texto == "sino": 
+                    if next(pgma).texto!=":": exit("EOL Error")
+                    scope_vars = run(pgma, scope_vars)
+                else:
+                    for tk in pgma:
+                        for tk in pgma:
+                            if tk.texto=="END": break
+                        next(pgma)
+                        if tk.texto =="o":break
+            continue_for=None
+            continue
+        if tkn is None: break
+        elif tkn.tipo == Token.IDENTIFICADOR:
+            n = next(pgma)
             if n.tipo == Token.ASIGNACION:
-                asignacion(tk, pgma, scope_vars)
+                asignacion(tkn, pgma, scope_vars)
             elif n.texto == "(":
-                call_function(tk.texto, pgma, scope_vars)
+                call_function(tkn.texto, pgma, scope_vars)
             elif n.texto == "[": #setitem array
                 i,args = 1,[]
                 while i!=0:
-                    n_tk = pgma.get_token()
+                    n_tk = next(pgma)
                     if n_tk =="[": 
                         i+=1
                         continue
@@ -435,27 +525,32 @@ def run(pgma:Tokenizer, scope_vars=variables, Func=None):
                         i-=1
                         continue
                     args.append(tk)
-                n = pgma.get_token()
+                n = next(pgma)
                 if n.tipo != Token.ASIGNACION: raise SyntaxError(f"error de sintaxis en {n.texto}")
                 asignacion(tk[args[0]], pgma)
-            elif n.tipo == Token.IDENTIFICADOR and tk.texto == "func":
+            elif n.tipo == Token.IDENTIFICADOR and tkn.texto == "func":
                 create_func(pgma, n,scope_vars)
-        elif tk.tipo == Token.FOR:
-            control_variable, iterable, code= proc_for(pgma, scope_vars)
-            codec = code.tokens
+        elif tkn.tipo == Token.FOR:
+            control_variable, iterable, code = proc_for(pgma, scope_vars)
+            temp_tk = Tokenizer([])
             for x in iterable:
-                code.tokens = codec.copy()
+                temp_tk.tmp_iter(code)
                 scope_vars[control_variable.texto] = x
-                scope_vars = run(code, scope_vars)
-        elif tk.tipo == Token.WHILE:
+                scope_vars = run(temp_tk, scope_vars)
+        elif tkn.tipo == Token.WHILE:
             condition_while, codec = proc_while(pgma)
-
-            while eval_expresion(condition_while.copy(), scope_vars):
-                scope_vars = run(codec.copy())
-        elif tk.tipo == Token.CONDICION:
-            proc_cond(pgma, tk, scope_vars)
-        elif Func and tk.tipo == Token.RETURN: 
-            return eval_expresion(pgma)  
+            temp_tk = Tokenizer([])
+            while eval_expresion(iter(condition_while.copy()), scope_vars):
+                temp_tk.tmp_iter(codec)
+                scope_vars = run(temp_tk, scope_vars)
+        elif tkn.tipo == Token.CONDICION:
+            if continue_for == None: 
+                result_cond = proc_cond(pgma, tkn, scope_vars)
+                continue_for = True
+            
+        elif tkn.tipo == Token.RETURN:
+            if Func: return eval_expresion(pgma)
+            exit("retornar no está dentro de una función")
     return scope_vars if not Func else None
 
 if __name__ == "__main__":
@@ -463,7 +558,7 @@ if __name__ == "__main__":
     if file:
         with open(f"{file}") as f:
             pgma = [line.strip() for line in f.readlines() if line.strip() and not line.startswith("//")]
-        pgma = Tokenizer(my_tokenizer(pgma))
+        pgma = Tokenizer(pgma)
         run(pgma)
     else:
         def starts_with(cadena:str, iterable:list):
@@ -477,12 +572,12 @@ if __name__ == "__main__":
                 while entrada:
                     pgma.append(entrada)
                     entrada = input("... ").strip()
-                runner = Tokenizer(my_tokenizer(pgma))
+                runner = Tokenizer(pgma)
                 variables = run(runner)
                 continue
             elif entrada and entrada[-1] !=";": 
                 print("EOL Error")
                 continue
             elif entrada == "exit();": break
-            runner = Tokenizer(my_tokenizer(pgma))
+            runner = Tokenizer(pgma)
             variables = run(runner)
