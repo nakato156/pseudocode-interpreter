@@ -10,6 +10,13 @@
 
 ```
 imprimir("Hola Mundo :D");
+
+func saludar(saludo):
+START;
+	imprimir(saludo);
+END;
+
+saludar("Hola psc");
 ```
 ### Características Internas　
 La implementación de este lenguaje se basa en Python y sus generadores e iteradores que permiten obtener o procesar valores según se requieran lo que minimiza el uso de memoria. 
@@ -79,7 +86,7 @@ La asignación responde a la sintaxis
 	<nombre_variable> = <valor>
 
 ### SIntaxis de bloques
-Los bloques son sentencias que conllevan a la ejecución de un determinado código, es decir una sentencia se asocia a un pedazo de código posterior. Los bloques de código se encuentran al momento de declarar una función, ya que al llamar a la función se ejecutará el código correspondiente, también se encuentran en las condiciones, ya que se debe de ejecutar un pedazo de código según el resultado de evaluar la condición y lo mismo para los ciclos. **Todas** las sentencias que necesiten bloques de código terminan con `:`. Por lo que **Todas** las sentencias que indiquen condiciones, ciclos o funciones terminan con `:` en vez de `;`. Además en la línea siguiente debe de ir la palabra reservada `START;` para indicar el comienzo de la sentencia y `END;` para finalizarla. Estas palabras son como las llaves `{}` de JavaScript u otro lenguaje para indicar que el código pertenece a tal parte.
+Los bloques son sentencias que conllevan a la ejecución de un determinado código, es decir una sentencia se asocia a un pedazo de código posterior. Los bloques de código se encuentran al momento de declarar una función, ya que al llamar a la función se ejecutará el código correspondiente, también se encuentran en las condiciones, ya que se debe de ejecutar un pedazo de código según el resultado de evaluar la condición y lo mismo para los ciclos. **Todas** las sentencias que necesiten bloques de código terminan con `:`. Por lo que **Todas** las sentencias que indiquen condiciones, ciclos o funciones terminan con `:` en vez de `;`. Además en la línea siguiente debe de ir la palabra reservada `START;` para indicar el comienzo de la sentencia y `END;` para finalizarla. Estas palabras son como las llaves `{}` de JavaScript u otro lenguaje para indicar que el código pertenece a cierta parte.
 ```
 //ejemplo en condición
 z = 1;
