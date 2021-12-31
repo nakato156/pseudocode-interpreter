@@ -8,6 +8,9 @@
 - Basado en Python y en un sistema de generadores e iteradores
 - Posee un modo Interactivo
 
+```
+imprimir("Hola Mundo :D");
+```
 ### Características Internas　
 La implementación de este lenguaje se basa en Python y sus generadores e iteradores que permiten obtener o procesar valores según se requieran lo que minimiza el uso de memoria. 
 Un archivo de texto con extención `.psc` es recibido y primeramente pre-procesado para eliminar los comentarios indicados con `//` al inicio de una línea. El archivo se convierte en una lista donde cada línea representa un elemento en una lista Python para un posterior procesamiento de cada instrucción. 
