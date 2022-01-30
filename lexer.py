@@ -9,7 +9,33 @@ arithmetic_operators = {
     "//": lambda a,b: a//b,
     "*": lambda a,b: a*b
 }
+sintaxis={
+    "key_word":{
+        "if":[
+            ["si"],
 
+        ],
+        "elif":"o",
+        "else":"sino",
+        "while":"mientras",
+        "for":[
+            "para",
+            "iterar"
+        ],
+        "begin":"START",
+        "end":"END",
+        "return":"retornar"
+    },
+    "arithmetic_operators":{
+        "+": lambda a,b: a+b,
+        "-": lambda a,b: a-b,
+        "^": lambda a,b: a**b,
+        "/": lambda a,b: a.__div__(b),
+        "//": lambda a,b: a//b,
+        "*": lambda a,b: a*b
+    },
+    "operadores":"=(),+-*/<>[];:!~"
+};
 def check_float(texto:str)->str:
     texto = texto.replace(",",".")
     if texto.count(".")!=1 or len(texto)<2: return
@@ -161,14 +187,13 @@ class Token():
 class Tokenizer():
     def __init__(self, pgma:list):
         self.tokens = self._tokenizer(pgma)
-
     def __iter__(self):
         return self
     
     def __next__(self)->Token:
         return next(self.tokens)
 
-    def _tokenizer(self, pgma)->Token:
+    def _tokenizer(self, pgma)->Token: 
         for line in pgma:
             linea:str = line.strip()
             if linea.count("=")==1 and linea[-1] !=";": exit("EOL Error")
@@ -205,9 +230,9 @@ class Tokenizer():
     def skip_tokens(self, skip)->Token:
         try:
             for _ in range(skip):
-                next(self.tokens)
+                self.__next__();
                 if not self.tokens: break
-            n = next(self.tokens)
+            n = self.__next__();
         except StopIteration:
             n = None
         return n
@@ -299,7 +324,10 @@ operaciones_igualdad = {
     ">": lambda x,y: x>y,
     "<": lambda x,y: x<y
 }
-
+###############################################For commint:
+class ERROR_Function_Not_Define(Exception):#Para identificar las excepciones que se lazan.
+    def __init__(self,msg="Funcion sin declarar."):
+        self.message=msg;
 def call_function(func:str, tokens:Tokenizer, scope_vars=variables):
     tmp_tokens = []
     if func in scope_vars or func in variables:
@@ -322,7 +350,7 @@ def call_function(func:str, tokens:Tokenizer, scope_vars=variables):
         r= place[func](args)
         return r
     else:
-        raise NameError(f"No se ha declarado la función {func}")
+        raise ERROR_Function_Not_Define(f"No se ha declarado la función {func}")
 
 def proc_array(exp:Tokenizer, scope_vars=variables)->Token:
     args = []
@@ -463,9 +491,12 @@ def proc_cond(pgma:Tokenizer, tk:Token, scope_vars:dict, Func=None)->bool:
     tks = pgma.tokens
     pgma.tmp_iter(tokens)
     if expr: expr=run(pgma, Func=Func)
-    pgma.tokens = tks
-
-    if next(pgma).texto != ";": exit("EOF ERROR")
+    pgma.tokens = tks;
+    #Cuando se anidan los "si", pgma se vuelve una lista y no un generator, por lo que no debes llamar a la funcion next(pgma)
+    for i in pgma:
+        if i.texto!=';': exit("EOF ERROR");
+        next(pgma);
+        break;
     return expr
 
 def proc_while(pgma:Tokenizer)->tuple:
@@ -544,11 +575,50 @@ def run(pgman:Tokenizer = None, scope_vars=variables, Func=None, continue_for=No
             exit("retornar no está dentro de una función")
     return scope_vars if not Func else Token("None") if type(scope_vars)==dict else scope_vars
 
+def deleted_comment_line(str_:str,is_mult_lineas=False) -> str:
+    init_comment=False;
+    is_number=False;
+    exit_="";
+    is_str={"type":"","init":False};#Para saber si comienza una cadena de caracteres interna: imprimir(" \"//Esto aparecera-");//esto no aparecera.
+    scape=0;
+    MAX_LEN=len(str_);
+    if MAX_LEN>1:
+        if str_[:2]=='//':#Si la linea inicia con // retornamos de una vez.
+            return "";
+    for i in range(MAX_LEN):
+        char=str_[i];
+        if init_comment>1:
+            if init_comment==2:
+                exit_=exit_[:-2];#Para solo eliminar la doble raya del comentario.
+                if not is_mult_lineas:#Si no necesitamos ver mas de una linea entonces eliminamos.
+                    return exit_;
+                init_comment=3;
+            
+            if char=='\n':#Si llegamos al final de linea entonces comenzamos otra vez, pero sin reiniciar el bucle.
+                init_comment=0;
+                exit_+='\n';
+        else:#Si no es un comentario:
+            if char!='/':#Vemos si es un digito.
+                is_number=char.isdigit();
+                init_comment=0;#Para casos como: / / / //gehg
+            elif char=='/' and not is_number and not is_str["init"]:#Si no es un numero, pero si es '/'
+                init_comment+=1;
+            if char=='"' or char=="'":#Si es un string ("",'')
+                if is_str["type"]=="":#Es el inicio.
+                    is_str["type"]='"' if char=='"' else "'";
+                    is_str["init"]=True;
+                elif not scape==2 and char==is_str["type"]:#Si no es un signo de escape(\" o \') entonces se cierra la cadena.
+                    is_str["type"]='';
+                    is_str["init"]=False;
+                    is_scape=0;
+            scape=scape+1 if char=="\\" else 0;#Preparamos para saber si es un signo de scape.
+            exit_+=char;
+    return exit_;
 if __name__ == "__main__":
     file = argv[1] if len(argv)>1 else None
     if file:
         with open(f"{file}") as f:
-            pgma = [line.strip() for line in f.readlines() if line.strip() and not line.strip().startswith("//")]
+            pgma = [deleted_comment_line(line.strip()) for line in f.readlines()]
         pgma = Tokenizer(pgma)
         run(pgman=pgma, scope_vars=variables)
     else:
@@ -556,13 +626,22 @@ if __name__ == "__main__":
             return any(cadena.startswith(x) for x in iterable)
         while True:
             pgma = []
-            entrada = input(">>> ").strip()
+            entrada = deleted_comment_line(input(">>> ").strip());#Primero eliminamos 
             pgma.append(entrada)
             if starts_with(entrada, ["si", "sino", "mientras", "func", "iterar", "para"]) and entrada[-1] == ":":
-                entrada = input("... ").strip()
-                while entrada:
+                level=0;
+                while True:
+                    #Le damos una vista al usuario sobre el nivel de plofundidad.
+                    entrada = deleted_comment_line(input((' '*level)+"... ").strip());
+                    #Distingimos el nivel de en que se encuentra.
+                    if entrada.startswith("START"):
+                        level+=1;
+                    elif entrada.startswith("END"):
+                        level-=1;
+                        if level==0:#Ya llegamos a la superficie.
+                            pgma.append(entrada);
+                            break;
                     pgma.append(entrada)
-                    entrada = input("... ").strip()
                 runner = Tokenizer(pgma)
                 variables = run(runner)
                 continue
