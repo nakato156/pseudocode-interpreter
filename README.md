@@ -20,7 +20,7 @@ saludar("Hola psc");
 ```
 ### Características Internas　
 La implementación de este lenguaje se basa en Python y sus generadores e iteradores que permiten obtener o procesar valores según se requieran lo que minimiza el uso de memoria. 
-Un archivo de texto con extención `.psc` es recibido y primeramente pre-procesado para eliminar los comentarios indicados con `//` al inicio de una línea. El archivo se convierte en una lista donde cada línea representa un elemento en una lista Python para un posterior procesamiento de cada instrucción. 
+Un archivo de texto con extención `.psc` es recibido y primeramente pre-procesado para eliminar los comentarios indicados con `#` al inicio de una línea. El archivo se convierte en una lista donde cada línea representa un elemento en una lista Python para un posterior procesamiento de cada instrucción. 
 
 El procesamiento se basa en la conversión de una serie de caracteres a *Tokens* gracias a un *tokenizer* implementado en una clase `Tokenizer` que genera *Token* a *Token*  y se devuelve según se necesite, esto se logra implementando el método `__iter__` para tratar a la clase como un iterador que basa su funcionamiento en el método `_tokenizer` que es un generador que devuelve un objeto de tipo `Token`. Este objeto continene la información mínima necesaria para indicar una acción. Un objeto `Token` se compone de dos atributos:
 1. El tipo: De acuerdo a la secuencia de caracteres dada se analiza y se determina un tipo para esa secuencia. Ir a la sección Tipos de token para saber más
@@ -72,13 +72,13 @@ Hasta esta versión no se soporta la asignación en los arrays, es decir, hacer 
 ### Asignación
 La asignacións se hace de igual manera en que se haría en todo lenguaje de programación pero sin especificar el tipo de dato que será o espera la variable. Un ejemplo:
 
-    //asignanado a la variable a el entero 10
+    #asignanado a la variable a el entero 10
     a = 10;
-	// asignando un string a una variable
+	# asignando un string a una variable
 	cadena = "una cadena de texto";
-	//asignando un float a una variable
+	#asignando un float a una variable
 	f = 10.7;
-	//creando un array
+	#creando un array
 	arr = ["hola", "soy", "c.", 16];
 
 La asignación responde a la sintaxis 
@@ -88,14 +88,14 @@ La asignación responde a la sintaxis
 ### SIntaxis de bloques
 Los bloques son sentencias que conllevan a la ejecución de un determinado código, es decir una sentencia se asocia a un pedazo de código posterior. Los bloques de código se encuentran al momento de declarar una función, ya que al llamar a la función se ejecutará el código correspondiente, también se encuentran en las condiciones, ya que se debe de ejecutar un pedazo de código según el resultado de evaluar la condición y lo mismo para los ciclos. **Todas** las sentencias que necesiten bloques de código terminan con `:`. Por lo que **Todas** las sentencias que indiquen condiciones, ciclos o funciones terminan con `:` en vez de `;`. Además en la línea siguiente debe de ir la palabra reservada `START;` para indicar el comienzo de la sentencia y `END;` para finalizarla. Estas palabras son como las llaves `{}` de JavaScript u otro lenguaje para indicar que el código pertenece a cierta parte.
 ```
-//ejemplo en condición
+#ejemplo en condición
 z = 1;
 si z==1:
 START;
 	imprimir("es igual");
 END;
 
-//ejemplo en ciclo
+#ejemplo en ciclo
 iterar x desde 1 hasta 3:
 START;
 	imprimir(x);
@@ -110,21 +110,30 @@ Estos ciclos iteran en un iterable o en un rango, los objetos iterables con los 
 
     iterar <variable_de_control> desde <inicio> hasta <final> con paso <paso>:
 	START;
-		//codigo
+		#codigo
 	END;
 
 El paso se puede omitir y por efecto será `1`, lo que significa que la sentencia puede quedar tal que así:
 
     iterar <variable_de_control> desde <inicio> hasta <final>:
 	START;
-		//codigo
+		#codigo
 	END;
 
 La sintaxis de la segunda forma es:
 
     para <variable_de_control> en <obj_iterable>:
 	START;
-		//code
+		#code
 	END;
 
 Esta forma permite iterar en un iterable como lo son los arrays o strings, para esta forma **no existe paso**.
+#### Codigos de escapes aceptados:
+    En los string aceptamos los siguientes caracteres de escapes:
+        - \"
+        - \'
+        - \n
+        - \r
+        - \t
+        - \\
+        - \xCODES_HEXADECIMAL
