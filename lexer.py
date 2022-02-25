@@ -1,50 +1,25 @@
 from sys import argv
 from typing import Text
-# arimetic operators 
-arithmetic_operators = {
-    "+": lambda a,b: a+b,
-    "-": lambda a,b: a-b,
-    "^": lambda a,b: a**b,
-    "/": lambda a,b: a.__div__(b),
-    "//": lambda a,b: a//b,
-    "*": lambda a,b: a*b
-}
-sintaxis={
-    "key_word":{
-        "if":[
-            ["si"],
-
-        ],
-        "elif":"o",
-        "else":"sino",
-        "while":"mientras",
-        "for":[
-            "para",
-            "iterar"
-        ],
-        "begin":"START",
-        "end":"END",
-        "return":"retornar"
-    },
-    "arithmetic_operators":{
-        "+": lambda a,b: a+b,
-        "-": lambda a,b: a-b,
-        "^": lambda a,b: a**b,
-        "/": lambda a,b: a.__div__(b),
-        "//": lambda a,b: a//b,
-        "*": lambda a,b: a*b
-    },
-    "operadores":"=(),+-*/<>[];:!~"
+"""[summary]
+Nota: usare el modulo colorama para el color, que debe ser descargado.
+[description]
+"""
+ANSI_SCAPE={
+    "\"":"\"",
+    "'":"\'",
+    "n":"\n",
+    "a":"\a",
+    "b":"\b",
+    "f":"\f",
+    "r":"\r",
+    "t":"\t",
+    "v":"\v",
+    "\\":"\\",
+    "?":"?",
+    "x":None
 };
-def check_float(texto:str)->str:
-    texto = texto.replace(",",".")
-    if texto.count(".")!=1 or len(texto)<2: return
-    for ch in texto:
-        if not (ch.isnumeric() or ch == "."): return 
-    return texto
-
-operadores = "=(),+-*/<>[];:!~"
-class Token():
+# arimetic operators
+class TOKEN_VARS():
     OPERADOR = 1
     ENTERO = 2
     FLOAT = 3
@@ -58,7 +33,113 @@ class Token():
     CONDICION = 11
     BOOLEAN = 12
     NADA = 13
+    LOOPS = 14
+    FUNC = 15
+    START = 16
+    END = 17
+    RETORNAR = 18
+arithmetic_operators = {
+    "+": lambda a,b: a+b,
+    "-": lambda a,b: a-b,
+    "^": lambda a,b: a**b,
+    "/": lambda a,b: a.__div__(b),
+    "//": lambda a,b: a//b,
+    "*": lambda a,b: a*b
+}
+"""sintaxis={
+    "key_word":{
+        "condicionales":{
+            key:value for key,value in {"si":0,"sino si":1,"sino":2}
+        },
+        "loops":{
+            key:value for key,value in {"para":0,"mientras":1,"salto":2}
+        },
+        "operators":{
+            "func":TOKEN_VARS.FUNC,
+            "START":TOKEN_VARS.START,
+            "END":TOKEN_VARS.END,
+            "retornar":TOKEN_VARS.RETORNAR
+        },
+        "booleans":{
+            "verdadero":True,
+            "falso":False,
+            "true":True,
+            "false":False
+        }
+        
+    },
+    "arithmetic_operators":{#Dudo mucho de este bucle(con respeto a como se ve la sintaxis), cleo que seria mejor eliminarlo y dejarlo como antes.
+        key:value for key,value in {"+":lambda x,y: x+y,"-":lambda x,y: x-y,"*":lambda x,y: x*y,"^":lambda x,y:x**y,"/": lambda x,y: x.__div__(y),"//":lambda x,y:x//y}
+    },
+    "operadores":"=(),+-*/<>[];:!~"
+};"""
 
+def check_float(texto:str)->str:
+    texto = texto.replace(",",".")
+    if texto.count(".")!=1 or len(texto)<2: return
+    for ch in texto:
+        if not (ch.isnumeric() or ch == "."): return 
+    return texto
+
+operadores = "=(),+-*/<>[];:!~"
+#For scape_str.test
+#scape_str("\\n")
+#scape_str("imprimir(\"\\n\\\"\" ")
+#scape_str(input());
+#imprimir("hola\n mundo\")
+def scape_str(str_:str,INIT:int=0,END=None):
+    exit_="";
+    LEN=END if END else len(str_);
+    scape=0;
+    i=INIT;
+    while i<LEN:
+        char=str_[i];
+        if char=='\\':#Preparamos para saber si es un signo de scape.
+            if i+1<LEN:
+                i+=1;
+                char=str_[i];
+                if char in ANSI_SCAPE:
+                    char=ANSI_SCAPE[char];
+                    if not isinstance(char,str):#if char: \x* : significa que el usuario quiere ingresar un codigo hexadecimal.
+                        int_="";
+                        iu=0;
+                        for iu in range(i+1,LEN):
+                            str_[iu]
+                            if not (str_[iu]>="a" and str_[iu]<="f") and not (str_[iu]>='0' and str_[iu]<='9'):#No es hexadecimal.
+                                break;
+                            int_+=str_[iu];
+                        char=chr(int("0x"+int_,16));
+                        i=iu-1;
+            else: return {"end":False,"str":exit_+char};
+        exit_+=char;
+        #Ocurre un error cuando hacen: "hola\\""
+        i+=1;
+    return {"end":False,"str":exit_};
+def search_sub_str(str_:str,init:int=0)->str:
+    is_str={"type":"","init":False};
+    i=init;
+    LEN=len(str_);
+    THE_END=False;#Para saber si terminó la cadena.
+    while i<LEN:
+        char=str_[i];
+        if char in "\"'":#Si es un string ("",'')
+                if is_str["type"]=="":#Es el inicio de la cadena.
+                    is_str["type"]='"' if char=='"' else "'";
+                    is_str["init"]=True;
+                    init=i;
+                elif char==is_str["type"]:#Si no es un signo de escape(\" o \') entonces se cierra la cadena.
+                    THE_END=True;
+                    break;
+        if is_str["type"]!="":
+            if char=='\\':#Scapamos cualquier caracter.
+                i+=1;
+        #Ocurre un error cuando hacen: "hola\\""
+        i+=1;
+    if len(is_str["type"])==0:
+        return "";
+    return {"init":init,"end":i,"THE_END":THE_END};
+
+class Token(TOKEN_VARS):
     precedencia = {
             1:"+-()",
             2:"~&|",
@@ -78,7 +159,7 @@ class Token():
         self.clasf_token(texto)
     
     def clasf_token(self, texto:str):
-        texto = texto.replace("'", '"')
+        #texto = texto.replace("'", '"')#se quita por que sino se puede cambiar el signo del texto anidado: imprimir("hola 'como estas' tu") -> hola "como estas" tu
         self.tipo = None
         self.texto = texto
         if texto in "*^/+-%":
@@ -102,7 +183,7 @@ class Token():
             self.tipo = Token.IDENTIFICADOR
         elif texto == "=":
             self.tipo = Token.ASIGNACION
-        elif texto[0] == '"':
+        elif texto[0] in "\"'":
             self.tipo = Token.STRING
             self.texto = texto[1:-1]
 
@@ -196,7 +277,6 @@ class Tokenizer():
     def _tokenizer(self, pgma)->Token: 
         for line in pgma:
             linea:str = line.strip()
-            if linea.count("=")==1 and linea[-1] !=";": exit("EOL Error")
             largo = len(linea)
             i = 0
             while i < largo:
@@ -204,22 +284,16 @@ class Tokenizer():
 
                 while linea[i] == ' ' and i < largo:
                     i += 1
+                if i==largo: break
 
-                if i == largo: break
-                
                 car = linea[i]
                 if linea[i] in operadores:
                     yield Token(car)
-                    i += 1
-
+                    i+=1;
                 elif car in "'\"":
-                    inicio = i
-                    i += 1
-                    while i < largo and linea[i] != car:
-                        i += 1
-                    yield Token(linea[inicio:i+1])
-                    i += 1
-
+                    tmp=search_sub_str(linea,inicio);
+                    yield Token(scape_str(linea[tmp["init"]:tmp["end"]+1])["str"]);
+                    i=tmp["end"]+1;
                 else:
                     inicio = i
                     i += 1
@@ -313,6 +387,7 @@ class Stack():
 
 variables = {
     "imprimir": lambda x: print(*x),
+    "print": lambda x:print(*x),
     "tipo": lambda x: x[0].get_type(),
     "leer": lambda x: input(*x)
 }
@@ -328,6 +403,7 @@ operaciones_igualdad = {
 class ERROR_Function_Not_Define(Exception):#Para identificar las excepciones que se lazan.
     def __init__(self,msg="Funcion sin declarar."):
         self.message=msg;
+#imprimir("hola mundo\n\"//dsad");//No debe aparecer
 def call_function(func:str, tokens:Tokenizer, scope_vars=variables):
     tmp_tokens = []
     if func in scope_vars or func in variables:
@@ -336,17 +412,18 @@ def call_function(func:str, tokens:Tokenizer, scope_vars=variables):
         for tk in tokens:
             if tk.texto == ";" and tk.tipo is None: exit("Sintaxis Inválida")
             if tk.texto == "(": END+=1
-            elif tk.texto == ")": END-=1
-            if END==0 and tk.texto == ")": 
-                tmp_tokens = pre_args[:]
-                if tmp_tokens: 
-                    args.append(eval_expresion(iter(tmp_tokens), scope_vars))
-                break
+            elif tk.texto == ")":
+                END-=1
+                if END==0: 
+                    tmp_tokens = pre_args[:]
+                    if tmp_tokens: 
+                        args.append(eval_expresion(iter(tmp_tokens), scope_vars))
+                    break
             elif tk.texto!=",": pre_args.append(tk)
             elif tk.texto == "," and END==1: 
                 tmp_tokens = pre_args[:]
                 args.append(eval_expresion(iter(tmp_tokens), scope_vars))
-        else: exit("EOF Error")
+        else: exit("Sintaxis invalida: Falta cerrar el parentesis.");
         r= place[func](args)
         return r
     else:
@@ -576,44 +653,43 @@ def run(pgman:Tokenizer = None, scope_vars=variables, Func=None, continue_for=No
     return scope_vars if not Func else Token("None") if type(scope_vars)==dict else scope_vars
 
 def deleted_comment_line(str_:str,is_mult_lineas=False) -> str:
+    """Descripción:
+        [Funcion que pide una cadena y elimina todos los comentarios de esa cadena: del # in str_, pero deja intacto los comentarios dentro de la sub-cadena: imprimir("hola#mundo");#no aparecera -> imprimir("hola#mundo");]
+    
+    Arguments:
+        str_ {str} -- [trozo de codigo para eliminar los comentarios.]
+    
+    Keyword Arguments:
+        is_mult_lineas {bool} -- [Permite decidir si se quiere analizar varias lineas o solo una, esto asegura velocidad cuando no es necesario varias lineas.] (default: {False})
+    
+    Returns:
+        str -- [Trozo de codigo sin comentarios○.]
+    """
     init_comment=False;
-    is_number=False;
     exit_="";
-    is_str={"type":"","init":False};#Para saber si comienza una cadena de caracteres interna: imprimir(" \"//Esto aparecera-");//esto no aparecera.
-    scape=0;
+    i=0;
     MAX_LEN=len(str_);
-    if MAX_LEN>1:
-        if str_[:2]=='//':#Si la linea inicia con // retornamos de una vez.
-            return "";
-    for i in range(MAX_LEN):
+    init_exit=0;
+    while i < MAX_LEN:
         char=str_[i];
-        if init_comment>1:
-            if init_comment==2:
-                exit_=exit_[:-2];#Para solo eliminar la doble raya del comentario.
-                if not is_mult_lineas:#Si no necesitamos ver mas de una linea entonces eliminamos.
-                    return exit_;
-                init_comment=3;
+        if init_comment:
+            if not is_mult_lineas:#Si no necesitamos ver mas de una linea entonces eliminamos.
+                break;
             
             if char=='\n':#Si llegamos al final de linea entonces comenzamos otra vez, pero sin reiniciar el bucle.
-                init_comment=0;
-                exit_+='\n';
+                init_comment=False;
+                init_exit=i;
         else:#Si no es un comentario:
-            if char!='/':#Vemos si es un digito.
-                is_number=char.isdigit();
-                init_comment=0;#Para casos como: / / / //gehg
-            elif char=='/' and not is_number and not is_str["init"]:#Si no es un numero, pero si es '/'
-                init_comment+=1;
-            if char=='"' or char=="'":#Si es un string ("",'')
-                if is_str["type"]=="":#Es el inicio.
-                    is_str["type"]='"' if char=='"' else "'";
-                    is_str["init"]=True;
-                elif not scape==2 and char==is_str["type"]:#Si no es un signo de escape(\" o \') entonces se cierra la cadena.
-                    is_str["type"]='';
-                    is_str["init"]=False;
-                    is_scape=0;
-            scape=scape+1 if char=="\\" else 0;#Preparamos para saber si es un signo de scape.
-            exit_+=char;
-    return exit_;
+            if char=='#':#Vemos si es un digito.
+                init_comment=True;
+                exit_+=str_[init_exit:i];#Como tenemos el inicio y el fin de la cadena sin los comentarios, lo aprevechamos.
+                i+=1;
+                continue;
+            
+            if char in "\"'":#Si es un string ("",'')
+                i=search_sub_str(str_,i)["end"];#Solo necesitamos saber donde termina la linea para no tratar la cadena pasada por el usuario.
+        i+=1;
+    return exit_ if init_comment else exit_+str_[init_exit:i+1];
 if __name__ == "__main__":
     file = argv[1] if len(argv)>1 else None
     if file:
@@ -626,18 +702,21 @@ if __name__ == "__main__":
             return any(cadena.startswith(x) for x in iterable)
         while True:
             pgma = []
-            entrada = deleted_comment_line(input(">>> ").strip());#Primero eliminamos 
+            entrada = deleted_comment_line(input(">>> ").strip());#Primero eliminamos los comentarios.
             pgma.append(entrada)
             if starts_with(entrada, ["si", "sino", "mientras", "func", "iterar", "para"]) and entrada[-1] == ":":
                 level=0;
                 while True:
-                    #Le damos una vista al usuario sobre el nivel de plofundidad.
+                    #Le damos una vista al usuario sobre el nivel de profundidad.
                     entrada = deleted_comment_line(input((' '*level)+"... ").strip());
+                    tmp=entrada.upper();
                     #Distingimos el nivel de en que se encuentra.
-                    if entrada.startswith("START"):
+                    if tmp.startswith("START"):#Se queda porque así podemos saber facilmente si es el inicio del codigo o nó, despues veo si puedo usar ":"
                         level+=1;
-                    elif entrada.startswith("END"):
+                        entrada=tmp;#Me pareció incomodo siempre tener que escribir en mayuscula esto.
+                    elif tmp.startswith("END"):
                         level-=1;
+                        entrada=tmp;
                         if level==0:#Ya llegamos a la superficie.
                             pgma.append(entrada);
                             break;
