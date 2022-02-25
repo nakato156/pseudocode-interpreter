@@ -3,6 +3,7 @@ env/
 env/Lib/
 dist/
 build/
+.pytest_cache/
 .vscode/
 __pycache__
 .pytest_cache
@@ -10,3 +11,5 @@ __init__.py
 archivo.ebnf
 desktop.ini
 lexer.spec
+test_lexer.py
+ERRORS.py
